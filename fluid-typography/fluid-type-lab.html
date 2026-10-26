@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fluid Type Lab for Field Notes</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; color: #202331; background: #faf9fc; font: 1rem/1.55 system-ui, sans-serif; }
+  main { max-width: 82rem; margin: auto; padding: 2rem 1.25rem 4rem; }
+  h1 { font-size: 2.25rem; line-height: 1.15; margin: .25rem 0 .8rem; }
+  h2 { font-size: 1.25rem; margin: 0 0 1rem; }
+  p { max-width: 65ch; }
+  .eyebrow { color: #6706ce; font-weight: 750; margin: 0; }
+  .intro { margin: 0 0 1.75rem; }
+  .layout { display: grid; grid-template-columns: minmax(16rem, 21rem) minmax(0, 1fr); gap: 1.25rem; align-items: start; }
+  .card { background: white; border: 1px solid #ded9e8; border-radius: 12px; padding: 1.25rem; min-width: 0; }
+  .stack { display: grid; gap: 1.25rem; min-width: 0; }
+  .pairs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .8rem; }
+  label { display: block; font-weight: 650; margin-bottom: .75rem; }
+  input, select, textarea, button { font: inherit; }
+  input:not([type=range]), select, textarea { display: block; width: 100%; padding: .55rem; border: 1px solid #9993a6; border-radius: 6px; color: inherit; background: white; margin-top: .3rem; }
+  input[type=range] { display: block; width: 100%; margin: .5rem 0 1rem; accent-color: #6706ce; }
+  textarea { resize: vertical; min-height: 6rem; }
+  .note { font-size: .9rem; color: #555066; }
+  .error { color: #a4202b; min-height: 1.6em; margin-bottom: 0; }
+  :focus-visible { outline: 3px solid #6706ce; outline-offset: 3px; }
+  .metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .6rem; margin: 0 0 1rem; }
+  .metrics div { padding: .7rem; background: #f6f2fc; border-radius: 6px; }
+  dt { font-size: .8rem; } dd { margin: .25rem 0 0; font-size: 1.2rem; font-weight: 700; }
+  svg { display: block; width: 100%; height: auto; }
+  .preview-scroll { overflow-x: auto; border: 1px solid #ded9e8; border-radius: 6px; }
+  iframe { display: block; height: 410px; border: 0; background: white; }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; background: #f6f2fc; border-radius: 6px; padding: 1rem; }
+  button { cursor: pointer; border: 1px solid #6706ce; border-radius: 6px; background: #6706ce; color: white; padding: .55rem 1rem; }
+  .secondary { color: #6706ce; background: white; }
+  table { width: 100%; border-collapse: collapse; font-size: .9rem; color: #333333; background: #ffffff; }
+  th, td { text-align: left; border-bottom: 1px solid #d9d9d9; padding: .5rem .3rem; }
+  th { background: #e5e5e5; color: #333333; }
+  tbody tr:nth-child(even) { background: #f5f5f5; }
+  #copy-status { min-height: 1.5em; }
+  @media (max-width: 52rem) { .layout { grid-template-columns: 1fr; } }
+  @media (max-width: 25rem) { .metrics { grid-template-columns: 1fr; } .pairs { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<main>
+  <p class="eyebrow">FIELD NOTES / MATH WEB DESIGN 01</p>
+  <h1>Fluid Type Lab</h1>
+  <p class="intro">Turn two design decisions into a font-size rule. Change one input, inspect the curve, and compare the calculation with the browser.</p>
+  <div class="layout">
+    <form id="controls" class="card" novalidate>
+      <h2>Design inputs</h2>
+      <p class="note" id="input-help">Endpoint sizes are CSS pixels at a reference root size of 16 px. Changing the preview root size leaves the exported CSS unchanged.</p>
+      <div class="pairs">
+        <label>Start width (px)<input id="w0" type="number" min="1" max="2400" step="any" value="360" required aria-describedby="input-help error"></label>
+        <label>End width (px)<input id="w1" type="number" min="1" max="2400" step="any" value="1200" required aria-describedby="input-help error"></label>
+        <label>Start size (px)<input id="s0" type="number" min="1" max="160" step="any" value="32" required aria-describedby="input-help error"></label>
+        <label>End size (px)<input id="s1" type="number" min="1" max="160" step="any" value="56" required aria-describedby="input-help error"></label>
+      </div>
+      <label>Preview width (px)<input id="width" type="number" min="240" max="2600" step="1" value="780" required aria-describedby="error"></label>
+      <label for="width-range">Adjust preview width</label>
+      <input id="width-range" type="range" min="240" max="2600" step="1" value="780">
+      <label>Preview root size (px)<input id="root" type="number" min="8" max="48" step="any" value="16" required aria-describedby="root-help error"></label>
+      <p id="root-help" class="note">A simulation inside the preview. This is not browser zoom or an accessibility certification.</p>
+      <label>Sizing strategy<select id="mode"><option value="fluid">Fluid</option><option value="stepped">Breakpoint-based</option><option value="constant">Constant</option></select></label>
+      <label>Heading text<textarea id="heading" maxlength="600">Designing for the Space We Have</textarea></label>
+      <button type="reset" class="secondary">Reset inputs</button>
+      <p id="error" class="error" role="status"></p>
+    </form>
+    <div class="stack">
+      <section class="card" aria-labelledby="curve-heading">
+        <h2 id="curve-heading">From viewport width to font size</h2>
+        <dl class="metrics">
+          <div><dt>Calculated</dt><dd id="expected">Pending</dd></div>
+          <div><dt>Browser computed</dt><dd id="actual">Pending</dd></div>
+          <div><dt>Difference</dt><dd id="difference">Pending</dd></div>
+        </dl>
+        <svg id="graph" viewBox="0 0 720 330" role="img" aria-labelledby="graph-title graph-description">
+          <title id="graph-title">Font-size strategies</title>
+          <desc id="graph-description">Purple solid shows fluid sizing. Teal dashed shows breakpoint-based sizing. Orange dotted shows constant sizing. Numerical samples are available in the table below.</desc>
+          <g id="plot"></g>
+        </svg>
+        <p class="note">Purple solid shows fluid sizing, teal dashed shows breakpoint-based sizing, and orange dotted shows constant sizing. The marker shows the selected strategy and preview width. The vertical scale adjusts to the endpoint sizes.</p>
+        <details><summary>View numerical samples and comparison rules</summary>
+          <p id="rules" class="note"></p>
+          <table><caption>Font sizes at the current preview root size</caption><thead><tr><th scope="col">Width (px)</th><th scope="col">Fluid</th><th scope="col">Breakpoint-based</th><th scope="col">Constant</th></tr></thead><tbody id="samples"></tbody></table>
+        </details>
+      </section>
+      <section class="card" aria-labelledby="preview-heading">
+        <h2 id="preview-heading">Reading-page preview</h2>
+        <p id="preview-help" class="note">This frame has its own viewport. Scroll horizontally to inspect widths larger than the space available here; the preview is not scaled down.</p>
+        <div class="preview-scroll" tabindex="0" role="region" aria-label="Scrollable reading-page preview" aria-describedby="preview-help">
+          <iframe id="preview" title="Field Notes reading-page preview" sandbox="allow-same-origin"></iframe>
+        </div>
+      </section>
+      <section class="card" aria-labelledby="css-heading">
+        <h2 id="css-heading">Your CSS</h2>
+        <pre><code id="css"></code></pre>
+        <button type="button" id="copy">Copy CSS</button>
+        <p id="copy-status" role="status" class="note"></p>
+      </section>
+    </div>
+  </div>
+  <p class="note">Check real browser zoom, text-only zoom, and text-spacing overrides separately on index.html. This lab uses CSS for the heading and JavaScript for the experiment.</p>
+</main>
+<script>
+"use strict";
+const byId = id => document.getElementById(id);
+const frame = byId("preview");
+const form = byId("controls");
+const REF_ROOT = 16;
+const decimal = n => Number(n.toFixed(6)).toString();
+let latest = null;
+let scheduled = false;
+let version = 0;
+
+// A pure arithmetic model. The preview root and reference root are separate.
+function makeModel({w0, w1, s0, s1}) {
+  if (![w0,w1,s0,s1].every(Number.isFinite) || w0 <= 0 || w1 <= w0 || s0 <= 0 || s1 < s0) {
+    throw new Error("Use positive values, an end width greater than the start width, and an end size at least as large as the start size.");
+  }
+  const slope = (s1 - s0) / (w1 - w0);
+  const intercept = s0 - slope * w0;
+  const minRem = s0 / REF_ROOT, maxRem = s1 / REF_ROOT;
+  const rem = intercept / REF_ROOT, vw = 100 * slope;
+  const middleWidth = (w0 + w1) / 2;
+  const middleRem = (minRem + maxRem) / 2;
+  return {
+    value(width, root, mode = "fluid") {
+      if (mode === "constant") return minRem * root;
+      if (mode === "stepped") return (width >= w1 ? maxRem : width >= middleWidth ? middleRem : minRem) * root;
+      return Math.max(minRem * root, Math.min(maxRem * root, rem * root + slope * width));
+    },
+    css(mode = "fluid") {
+      if (mode === "constant") return `.article-title {\n  font-size: ${decimal(minRem)}rem;\n}`;
+      if (mode === "stepped") return `.article-title { font-size: ${decimal(minRem)}rem; }\n@media (min-width: ${decimal(middleWidth)}px) {\n  .article-title { font-size: ${decimal(middleRem)}rem; }\n}\n@media (min-width: ${decimal(w1)}px) {\n  .article-title { font-size: ${decimal(maxRem)}rem; }\n}`;
+      return `.article-title {\n  font-size: clamp(\n    ${decimal(minRem)}rem,\n    ${decimal(rem)}rem + ${decimal(vw)}vw,\n    ${decimal(maxRem)}rem\n  );\n}`;
+    }, middleWidth
+  };
+}
+
+function readInputs() {
+  for (const input of form.querySelectorAll("input[type=number]")) {
+    if (!input.validity.valid) throw new Error("Complete each numeric field using a value inside its stated range.");
+  }
+  const p = Object.fromEntries(["w0","w1","s0","s1","width","root"].map(id => [id, byId(id).valueAsNumber]));
+  p.mode = byId("mode").value;
+  p.model = makeModel(p);
+  return p;
+}
+
+function svgElement(tag, attributes, text) {
+  const el = document.createElementNS("http://www.w3.org/2000/svg", tag);
+  for (const [key,value] of Object.entries(attributes)) el.setAttribute(key,value);
+  if (text !== undefined) el.textContent = text;
+  return el;
+}
+
+function drawGraph(p) {
+  const plot = byId("plot"); plot.replaceChildren();
+  const xMax = Math.max(1600, p.w1 + 200, p.width);
+  const startSize = p.s0 * p.root / REF_ROOT;
+  const endSize = p.s1 * p.root / REF_ROOT;
+  const middleSize = (startSize + endSize) / 2;
+  const sizeRange = endSize - startSize;
+  const padding = sizeRange > 0 ? sizeRange / 4 : Math.max(1, endSize / 5);
+  const yMin = Math.max(0, startSize - padding);
+  const yMax = endSize + padding;
+  const X = x => 64 + x / xMax * 630;
+  const Y = y => 275 - (y - yMin) / (yMax - yMin) * 250;
+  // Label the design sizes, adapting when the endpoints or root size change.
+  const sizeTicks = [...new Set([startSize, middleSize, endSize])];
+  for (const y of sizeTicks) {
+    plot.append(svgElement("line",{x1:64,y1:Y(y),x2:694,y2:Y(y),stroke:"#e6e2eb"}));
+    plot.append(svgElement("text",{x:54,y:Y(y)+5,"text-anchor":"end",fill:"#555066","font-size":13},decimal(y)));
+  }
+  for (let i=0;i<=4;i++) {
+    const x = xMax * i / 4;
+    plot.append(svgElement("text",{x:X(x),y:299,"text-anchor":"middle",fill:"#555066","font-size":13},String(Math.round(x))));
+  }
+  plot.append(svgElement("text",{x:64,y:15,fill:"#202331","font-size":14},"Font size (CSS px)"));
+  plot.append(svgElement("text",{x:380,y:325,"text-anchor":"middle",fill:"#202331","font-size":14},"Viewport width (CSS px)"));
+  const modes = [["constant","#a34a00","2 5"],["stepped","#087f83","9 5"],["fluid","#6706ce",""]];
+  for (const [mode,color,dash] of modes) {
+    let points;
+    if (mode === "stepped") {
+      const a=p.s0*p.root/16,b=(p.s0+p.s1)/2*p.root/16,c=p.s1*p.root/16;
+      points=[[0,a],[p.model.middleWidth,a],[p.model.middleWidth,b],[p.w1,b],[p.w1,c],[xMax,c]];
+    } else points=Array.from({length:321},(_,i)=>{const x=xMax*i/320;return [x,p.model.value(x,p.root,mode)];});
+    const d=points.map(([x,y],i)=>`${i?"L":"M"}${X(x).toFixed(2)},${Y(y).toFixed(2)}`).join(" ");
+    plot.append(svgElement("path",{d,fill:"none",stroke:color,"stroke-width":mode===p.mode?3.5:2,"stroke-dasharray":dash}));
+  }
+  const markerY=p.model.value(p.width,p.root,p.mode);
+  plot.append(svgElement("line",{x1:X(p.width),x2:X(p.width),y1:25,y2:275,stroke:"#777084","stroke-dasharray":"3 5"}));
+  plot.append(svgElement("circle",{cx:X(p.width),cy:Y(markerY),r:6,fill:"#202331",stroke:"white","stroke-width":2}));
+  byId("graph-description").textContent=`Font sizes at a ${p.root} px preview root. At ${p.width} px viewport width, the ${p.mode === "stepped" ? "breakpoint-based" : p.mode} size is ${markerY.toFixed(3)} px. Purple solid is fluid, teal dashed is breakpoint-based, and orange dotted is constant. A numerical table follows.`;
+  const body=byId("samples");body.replaceChildren();
+  const widths=[...new Set([Math.max(1,p.w0-40),p.w0,p.model.middleWidth,p.w1,p.w1+200])];
+  for(const width of widths){
+    const row=document.createElement("tr");
+    for(const value of [decimal(width),...['fluid','stepped','constant'].map(m=>p.model.value(width,p.root,m).toFixed(2)+" px")]){
+      const cell=document.createElement("td");cell.textContent=value;row.append(cell);
+    }body.append(row);
+  }
+  byId("rules").textContent=`Constant uses the starting size in rem. Breakpoint-based sizing uses the starting size below ${decimal(p.model.middleWidth)} px, the average size up to ${decimal(p.w1)} px, then the ending size. These comparison rules are illustrative, not recommendations.`;
+}
+
+function update() {
+  scheduled=false;
+  let p;
+  try { p=readInputs(); } catch(error) {byId("error").textContent=error.message;return;}
+  byId("error").textContent=""; latest=p;
+  byId("width-range").value=p.width;
+  const css=p.model.css(p.mode);
+  byId("css").textContent=css;
+  drawGraph(p);
+  if (!frame.contentDocument?.getElementById("title")) return;
+  frame.style.width=`${p.width}px`;
+  const doc=frame.contentDocument;
+  doc.documentElement.style.fontSize=`${p.root}px`;
+  doc.getElementById("sizing").textContent=css;
+  doc.getElementById("title").textContent=byId("heading").value;
+  const generation=++version;
+  requestAnimationFrame(()=>{
+    if(generation!==version)return;
+    const width=frame.contentWindow.innerWidth;
+    const predicted=p.model.value(width,p.root,p.mode);
+    const actual=parseFloat(frame.contentWindow.getComputedStyle(doc.getElementById("title")).fontSize);
+    byId("expected").textContent=`${predicted.toFixed(3)} px`;
+    byId("actual").textContent=`${actual.toFixed(3)} px`;
+    byId("difference").textContent=`${Math.abs(actual-predicted).toFixed(4)} px`;
+  });
+}
+function schedule(){if(!scheduled){scheduled=true;requestAnimationFrame(update);}}
+form.addEventListener("submit",e=>e.preventDefault());
+form.addEventListener("input",e=>{if(e.target.id==="width-range")byId("width").value=e.target.value;schedule();});
+form.addEventListener("reset",()=>requestAnimationFrame(schedule));
+byId("copy").addEventListener("click",async()=>{
+  try {await navigator.clipboard.writeText(byId("css").textContent);byId("copy-status").textContent="CSS copied.";}
+  catch {const range=document.createRange();range.selectNodeContents(byId("css"));const selection=getSelection();selection.removeAllRanges();selection.addRange(range);byId("copy-status").textContent="Copy access is unavailable here. The CSS is selected; use your browser’s Copy command.";}
+});
+frame.addEventListener("load",schedule);
+// The preview markup is fixed. User text is inserted later with textContent.
+frame.srcdoc=`<!doctype html><html lang="en"><head><meta charset="utf-8"><style>
+*{box-sizing:border-box}body{margin:0;font:1rem/1.6 system-ui,sans-serif;color:#202331;background:white}
+main{max-width:42rem;margin-inline:auto;padding:2rem 1.25rem}.publication{margin:0 0 1.5rem;color:#6706ce;font-weight:700}
+h1{margin:0 0 1.5rem;line-height:1.15;overflow-wrap:anywhere}p{margin:0 0 1.25rem}
+</style><style id="sizing"></style></head><body><main><p class="publication">Field Notes</p><article aria-labelledby="title"><h1 id="title" class="article-title"></h1><p>A reading page needs to work in many different spaces. Resize the preview and watch the title respond.</p><p>The heading follows the selected sizing rule. These paragraphs remain at one rem so you can compare their behavior.</p></article></main></body></html>`;
+schedule();
+</script>
+</body>
+</html>
